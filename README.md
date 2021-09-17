@@ -4,7 +4,7 @@
 <h3>Các bước chạy project</h3>
 <ol>
   <li>Clone project</li>
-  <li>Cài MySQL và tạo sẵn một CSDL rổng tên ecoursesdbv2</li>
+  <li>Cài MySQL và tạo sẵn một CSDL rỗng tên ecoursesdbv2</li>
   <li>Thực thi lệnh: pip install -r requirements.txt</li>
   <li>Thực thi các migrate: pip install migrate</li>
   <li>Chạy project: python manage.py runserver</li>

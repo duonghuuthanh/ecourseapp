@@ -1,5 +1,6 @@
 # ecourseapp
 <h3>Project demo phát triển các API với Django Rest Framework cho hệ thống khoá học trực tuyến</h3>
+<h3>Yêu cầu Python 3.7+ và MySQL 8+</h3>
 <h3>Các bước chạy project</h3>
 <ol>
   <li>Clone project</li>

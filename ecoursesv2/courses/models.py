@@ -73,6 +73,7 @@ class ActionBase(models.Model):
 
     class Meta:
         abstract = True
+        unique_together = ("lesson", "creator")
 
 
 class Action(ActionBase):

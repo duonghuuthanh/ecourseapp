@@ -1,8 +1,10 @@
+from jinja2 import contextfilter
 from rest_framework import viewsets, generics, status, permissions
 from rest_framework.views import APIView
 from .models import Category, Course, Lesson, Tag, User, Comment, Action, Rating, LessonView
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
 from django.http import Http404
 from .serializers import (
     CategorySerializer,
@@ -51,7 +53,7 @@ class CourseViewSet(viewsets.ViewSet, generics.ListAPIView):
         if q is not None:
             lessons = lessons.filter(subject__icontains=q)
 
-        return Response(LessonSerializer(lessons, many=True).data,
+        return Response(LessonSerializer(lessons, many=True, context={"request": request}).data,
                         status=status.HTTP_200_OK)
 
 
@@ -93,7 +95,7 @@ class LessonViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
                                        lesson=self.get_object(),
                                        creator=request.user)
 
-            return Response(CommentSerializer(c).data,
+            return Response(CommentSerializer(c, context={"request": request}).data,
                             status=status.HTTP_201_CREATED)
 
         return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -119,9 +121,9 @@ class LessonViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         except IndexError | ValueError:
             return Response(status=status.HTTP_400_BAD_REQUEST)
         else:
-            r = Rating.objects.create(rate=rating,
-                                      creator=request.user,
-                                      lesson=self.get_object())
+            r = Rating.objects.update_or_create(creator=request.user,
+                                                lesson=self.get_object(),
+                                                defaults={"rate": rating})
 
             return Response(RatingSerializer(r).data,
                             status=status.HTTP_200_OK)
@@ -135,13 +137,19 @@ class LessonViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         # v.views = int(v.views)
         v.refresh_from_db()
 
-
         return Response(LessonViewSerializer(v).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], detail=True, url_path="comments")
+    def get_comments(self, request, pk):
+        l = self.get_object()
+        return Response(CommentSerializer(l.comment_set.order_by("-id").all(), many=True, context={"request": self.request}).data,
+                        status=status.HTTP_200_OK)
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
+    parser_classes = [MultiPartParser, ]
 
     def get_permissions(self):
         if self.action == 'get_current_user':
@@ -151,7 +159,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], detail=False, url_path="current-user")
     def get_current_user(self, request):
-        return Response(self.serializer_class(request.user).data,
+        return Response(self.serializer_class(request.user, context={"request": request}).data,
                         status=status.HTTP_200_OK)
 
 
@@ -160,6 +168,7 @@ class CommentViewSet(viewsets.ViewSet, generics.DestroyAPIView,
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated]
+
 
     def destroy(self, request, *args, **kwargs):
         if request.user == self.get_object().creator:
